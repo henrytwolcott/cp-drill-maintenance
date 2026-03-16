@@ -197,6 +197,14 @@ def render_report_dashboard(sensor_summary: dict, cycles: list[dict], all_chunks
             section_content = report.get(label, "") if isinstance(report, dict) else report
             with st.container(border=True):
                 st.markdown(section_content)
+                if label == "Machine Context":
+                    st.markdown("---")
+                    st.markdown("**Full Machine Overview** — Festo CP-AM-DRILL Operating Manual, p. 32")
+                    st.image("data/Diagram/Full-drill-diagram-pg-32-manual.png", caption="Complete CP-AM-DRILL assembly: I/O module (1), valve terminal (2), Z-axis (5), X-axis driven (7), drills (12, 13)")
+                    st.markdown("**Component Parts Table** — p. 31")
+                    st.image("data/Diagram/Full-drill-diagram-part-table-pg31.png", caption="Component position reference table")
+                    st.markdown("**X/Z-Axis Assembly Detail** — p. 39")
+                    st.image("data/Diagram/z-axis-zoomedin-diagram-pg39-manual.webp", caption="Z-axis mini slide (pos 3) and X-axis linear drives (pos 6, 8) — components implicated in current anomaly")
 
     # ── AI Disclaimer ──────────────────────────────────────────────────────────
     st.warning(
