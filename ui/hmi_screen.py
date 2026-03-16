@@ -124,21 +124,38 @@ def render_hmi_screen(sensor_summary: dict) -> None:
     # ── Real-time axis status mini-panel ──────────────────────────────────────
     with st.expander("Live Axis Status", expanded=True):
         axes = [
-            ("Z-Axis Ascent (anomaly)", current_ms, 420, status),
-            ("Z-Axis Descent", sensor_summary["other_axes_status"]["z_axis_descend"]["current_avg_ms"], 450, "NORMAL"),
-            ("X-Axis Left",  sensor_summary["other_axes_status"]["x_axis_left"]["current_avg_ms"],   560, "NORMAL"),
-            ("X-Axis Right", sensor_summary["other_axes_status"]["x_axis_right"]["current_avg_ms"],  560, "NORMAL"),
+            ("Z-Axis Ascent (anomaly)", current_ms, 330, 420, status),
+            ("Z-Axis Descent", sensor_summary["other_axes_status"]["z_axis_descend"]["current_avg_ms"], 360, 450, "NORMAL"),
+            ("X-Axis Left",  sensor_summary["other_axes_status"]["x_axis_left"]["current_avg_ms"],  455, 560, "NORMAL"),
+            ("X-Axis Right", sensor_summary["other_axes_status"]["x_axis_right"]["current_avg_ms"], 455, 560, "NORMAL"),
         ]
-        for label, val, crit, ax_status in axes:
-            frac = min(val / crit, 1.0)
+        for label, val, warn, crit, ax_status in axes:
             tag_class = (
                 "status-critical" if ax_status == "CRITICAL"
                 else "status-warning" if ax_status == "WARNING"
                 else "status-normal"
             )
+            total = crit * 1.10
+            green_pct  = warn / total * 100
+            yellow_pct = (crit - warn) / total * 100
+            red_pct    = 100 - green_pct - yellow_pct
+            marker_pct = min(val / total * 100, 99.5)
+
+            bar_html = f"""
+<div style="position:relative; height:18px; border-radius:4px; overflow:visible; background:#e0e0e0; margin:6px 0;">
+  <div style="position:absolute; left:0; top:0; height:100%;
+              width:{green_pct:.2f}%; background:#4CAF50; border-radius:4px 0 0 4px;"></div>
+  <div style="position:absolute; left:{green_pct:.2f}%; top:0; height:100%;
+              width:{yellow_pct:.2f}%; background:#FFC107;"></div>
+  <div style="position:absolute; left:{green_pct + yellow_pct:.2f}%; top:0; height:100%;
+              width:{red_pct:.2f}%; background:#E53935; border-radius:0 4px 4px 0;"></div>
+  <div style="position:absolute; left:{marker_pct:.2f}%; top:-3px; height:calc(100% + 6px);
+              width:3px; background:white; border:1px solid #333; border-radius:2px; z-index:10;"></div>
+</div>
+"""
             col_a, col_b, col_c = st.columns([3, 5, 1])
             col_a.markdown(f"<small>{label}</small>", unsafe_allow_html=True)
-            col_b.progress(frac)
+            col_b.markdown(bar_html, unsafe_allow_html=True)
             col_c.markdown(
                 f'<span class="{tag_class}">{val} ms</span>',
                 unsafe_allow_html=True,

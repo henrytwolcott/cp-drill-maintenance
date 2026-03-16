@@ -80,6 +80,7 @@ def _render_axes_overview(sensor_summary: dict) -> None:
             "label":    "Z-Axis Ascent (anomaly)",
             "val":      sensor_summary["current_avg_ms"],
             "baseline": sensor_summary["baseline_ms"],
+            "warn":     sensor_summary["warning_threshold_ms"],
             "crit":     sensor_summary["critical_threshold_ms"],
             "status":   sensor_summary["status"],
         },
@@ -87,6 +88,7 @@ def _render_axes_overview(sensor_summary: dict) -> None:
             "label":    "Z-Axis Descent",
             "val":      sensor_summary["other_axes_status"]["z_axis_descend"]["current_avg_ms"],
             "baseline": 280,
+            "warn":     360,
             "crit":     450,
             "status":   "NORMAL",
         },
@@ -94,6 +96,7 @@ def _render_axes_overview(sensor_summary: dict) -> None:
             "label":    "X-Axis Left",
             "val":      sensor_summary["other_axes_status"]["x_axis_left"]["current_avg_ms"],
             "baseline": 350,
+            "warn":     455,
             "crit":     560,
             "status":   "NORMAL",
         },
@@ -101,27 +104,48 @@ def _render_axes_overview(sensor_summary: dict) -> None:
             "label":    "X-Axis Right",
             "val":      sensor_summary["other_axes_status"]["x_axis_right"]["current_avg_ms"],
             "baseline": 350,
+            "warn":     455,
             "crit":     560,
             "status":   "NORMAL",
         },
     ]
 
+    # Total bar range: 0 → crit + 10% headroom so the red zone is always visible
     with st.container():
         for ax in axes:
-            frac = min(ax["val"] / ax["crit"], 1.0)
             if ax["status"] == "CRITICAL":
-                colour = "#E53935"
                 badge = "🔴 CRITICAL"
             elif ax["status"] == "WARNING":
-                colour = "#FFC107"
                 badge = "🟡 WARNING"
             else:
-                colour = "#4CAF50"
                 badge = "🟢 NORMAL"
+
+            total = ax["crit"] * 1.10          # bar represents 0 → total
+            green_pct  = ax["warn"] / total * 100
+            yellow_pct = (ax["crit"] - ax["warn"]) / total * 100
+            red_pct    = 100 - green_pct - yellow_pct
+            marker_pct = min(ax["val"] / total * 100, 99.5)  # clamp so marker stays inside
+
+            bar_html = f"""
+<div style="position:relative; height:18px; border-radius:4px; overflow:visible; background:#e0e0e0; margin:6px 0;">
+  <!-- green zone -->
+  <div style="position:absolute; left:0; top:0; height:100%;
+              width:{green_pct:.2f}%; background:#4CAF50; border-radius:4px 0 0 4px;"></div>
+  <!-- yellow zone -->
+  <div style="position:absolute; left:{green_pct:.2f}%; top:0; height:100%;
+              width:{yellow_pct:.2f}%; background:#FFC107;"></div>
+  <!-- red zone -->
+  <div style="position:absolute; left:{green_pct + yellow_pct:.2f}%; top:0; height:100%;
+              width:{red_pct:.2f}%; background:#E53935; border-radius:0 4px 4px 0;"></div>
+  <!-- current value marker -->
+  <div style="position:absolute; left:{marker_pct:.2f}%; top:-3px; height:calc(100% + 6px);
+              width:3px; background:white; border:1px solid #333; border-radius:2px; z-index:10;"></div>
+</div>
+"""
 
             c1, c2, c3, c4 = st.columns([3, 4, 1.5, 1.5])
             c1.markdown(f"<small><b>{ax['label']}</b></small>", unsafe_allow_html=True)
-            c2.progress(frac)
+            c2.markdown(bar_html, unsafe_allow_html=True)
             c3.markdown(
                 f"<span style='font-family:monospace;font-weight:600;'>{ax['val']} ms</span>",
                 unsafe_allow_html=True,
